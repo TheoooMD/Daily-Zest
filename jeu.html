@@ -1,0 +1,438 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Le stand · Daily Zest</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="claude:viewport-fit-sides" content="cover">
+<script>
+  // arrivée par « Ouvrir le stand » : la dernière image de l'accueil (maquette zoomée) couvre la page dès le 1er affichage ;
+  // scene.js part du même cadrage sur le vrai stand, puis la dissout en dézoomant
+  try {
+    const from = sessionStorage.getItem('dz-intro'); sessionStorage.removeItem('dz-intro');
+    if (from && from.startsWith('data:image/') && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document.documentElement.style.setProperty('--from', `url("${from}")`); document.documentElement.classList.add('intro');
+    }
+  } catch (e) { /* stockage bloqué : pas d'intro */ }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: l'île plein écran est le fond de page ; panneaux en verre liquide : formules à gauche, réglages à droite, tableau en haut, cascade en bas.
+   Les couleurs suivent le moment de la journée (body[data-time]) : verre clair le jour et le soir, verre sombre la nuit. */
+:root{
+  --glass:linear-gradient(140deg,rgba(255,255,255,.56),rgba(255,255,255,.24));
+  --glass-edge:rgba(255,255,255,.55); --glass-shadow:0 18px 50px rgba(0,0,0,.14);
+  --rim:rgba(255,255,255,.9); --rim-soft:rgba(255,255,255,.55); --rim-dark:rgba(0,0,0,.28); --sheen:rgba(255,255,255,.4); --lens-ring:rgba(255,255,255,.75);
+  --tint:rgba(255,255,255,.26); --tint-fs:rgba(250,253,252,.68); --spot-c:#f29e00; --spot-a:26%;
+  --ink:#16302c; --muted:#3c5b55; --line:rgba(22,48,44,.15); --panel:rgba(255,255,255,.4); --on-ink:#ffffff;
+  --xl:#107c41; --xl-hover:#138a49; --xl-hi:#46a971; --xl-lo:#0b5c30; --xl-edge:#06301a;
+  --lemon:#f2c230; --pos:#1d7457; --neg:#c0473a; --slate:#6a8195; --hot:rgba(242,194,48,.42);
+  --f-display:"Silkscreen", "Courier New", monospace;
+  --f-body:"Instrument Sans", system-ui, -apple-system, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+body[data-time="night"]{
+  --glass:linear-gradient(140deg,rgba(66,80,132,.46),rgba(20,26,52,.36));
+  --glass-edge:rgba(255,255,255,.18); --glass-shadow:0 18px 50px rgba(0,0,0,.35);
+  --rim:rgba(255,255,255,.45); --rim-soft:rgba(255,255,255,.22); --rim-dark:rgba(0,0,0,.5); --sheen:rgba(255,255,255,.12); --lens-ring:rgba(255,255,255,.5);
+  --tint:rgba(16,22,46,.34); --tint-fs:rgba(16,22,46,.66); --spot-c:#a9c8ff; --spot-a:18%;
+  --ink:#eef1fb; --muted:#b9c2dc; --line:rgba(255,255,255,.17); --panel:rgba(255,255,255,.08); --on-ink:#16203a;
+  --pos:#74e0b4; --neg:#ff9384; --slate:#a3b3cb; --hot:rgba(242,194,48,.3); color-scheme:dark;
+}
+/* lumière du curseur selon le moment : soleil citron le jour, couchant orangé le soir, clair de lune la nuit */
+body[data-time="dusk"]{--spot-c:#ff6a2b}
+html,body{height:100%}
+body{margin:0;overflow:hidden;background:#a7dccf;color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+
+/* verre liquide : flou d'arrière-plan + reflets de bord (4 ombres internes blanches en diagonale, filet sombre) + lueur aux coins.
+   Jamais d'overflow:auto sur un .glass : Safari et Chrome y coupent le backdrop-filter, c'est .pane-in qui défile. */
+.glass{background:var(--glass);border:1px solid var(--glass-edge);
+  -webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
+  box-shadow:
+    inset 2px -2px 1px -1px var(--rim),inset -2px 2px 1px -1px var(--rim),
+    inset 6px -6px 1px -6px var(--rim-soft),inset -6px 6px 1px -6px var(--rim-soft),
+    inset 0 0 2px var(--rim-dark),var(--glass-shadow)}
+.glass::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(45deg,var(--sheen) 0%,transparent 14%,transparent 86%,var(--sheen) 100%)}
+/* Safari coupe le backdrop-filter d'un élément qui contient une zone qui défile :
+   sur les panneaux latéraux, le verre est porté par ::before (aucun enfant), le contenu défile au-dessus. */
+.left.glass,.desk.glass{background:none;border-color:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:var(--glass-shadow)}
+.left::before,.desk::before{content:"";position:absolute;inset:-1px;z-index:-1;border-radius:inherit;pointer-events:none;
+  background:var(--glass);border:1px solid var(--glass-edge);
+  -webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
+  box-shadow:inset 2px -2px 1px -1px var(--rim),inset -2px 2px 1px -1px var(--rim),
+    inset 6px -6px 1px -6px var(--rim-soft),inset -6px 6px 1px -6px var(--rim-soft),inset 0 0 2px var(--rim-dark)}
+
+/* verre liquide WebGL actif (classe posée par le script module) : la bibliothèque dessine le verre dans un canvas injecté,
+   on retire le flou CSS et on garde une teinte légère au-dessus pour la lisibilité ; le contenu passe au-dessus des deux. */
+.lg-on .glass,.lg-on .left::before,.lg-on .desk::before{background:none;border-color:transparent;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none}
+.lg-on .glass::after{background:var(--tint)}
+.glass::after{z-index:-1} /* reflet / teinte sous la lumière du curseur (.spot, z 0), le contenu au-dessus (z 1) */
+.glass > :not(canvas):not(.spot){position:relative;z-index:1}
+
+/* lumière du curseur (comme le FP&A Terminal) : halo + liseré qui suivent la souris sur chaque section.
+   --mx/--my sont en coordonnées écran sur <html> et les dégradés sont « fixed » : aucune écriture dans les panneaux en verre.
+   Les sections en verre ont déjà leurs pseudo-éléments pris, elles portent un <i class="spot">. */
+/* Un seul halo par surface en verre, posé au-dessus de son contenu : même teinte sur le fond, les cartes et les cases.
+   Les cartes intérieures n'ont que le liseré (un halo à elles s'additionnerait et paraîtrait plus foncé). */
+:is(.fcard,.card,.cell,.btn){position:relative}
+.spot{position:absolute;inset:0;z-index:2;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(circle 190px at var(--mx,-999px) var(--my,-999px),color-mix(in srgb,var(--spot-c) var(--spot-a),transparent),transparent 70%) fixed}
+:is(.fcard,.card,.cell,.btn)::after,.spot::after{content:"";position:absolute;inset:-1px;padding:1px;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(circle 120px at var(--mx,-999px) var(--my,-999px),var(--spot-c),transparent 70%) fixed;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+@media (hover:none){ :is(.fcard,.card,.cell,.btn)::after,.spot{display:none} }
+
+/* scène plein écran derrière tout */
+#scene{position:fixed;inset:0;z-index:0;width:100%;height:100%;display:block;image-rendering:pixelated;cursor:grab;pointer-events:auto}
+#scene:active{cursor:grabbing}
+
+.app{position:relative;height:100%;box-sizing:border-box;display:grid;grid-template-columns:310px minmax(0,1fr) 340px;grid-template-rows:minmax(0,1fr);gap:16px;
+  padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));pointer-events:none}
+.left{grid-column:1;grid-row:1} .desk{grid-column:3;grid-row:1}
+.dock{grid-column:2;grid-row:1;align-self:end;justify-self:center}
+.pane{position:relative;z-index:1;pointer-events:auto;border-radius:26px;min-height:0;display:flex;flex-direction:column;
+  transition:opacity .2s ease,transform .26s cubic-bezier(.2,.8,.2,1),visibility .26s}
+.pane-in{position:relative;z-index:1;flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;border-radius:inherit}
+.pane.closed,.board.closed{opacity:0;visibility:hidden;pointer-events:none}
+/* Verre WebGL : la lib remesure le panneau à chaque image ; un scale() la fait peindre un cadre réduit et décalé
+   (fantôme) pendant l'animation. Avec le verre liquide, on ferme donc en fondu seul, sans changer la géométrie. */
+.lg-on .pane.closed,.lg-on .board.closed{transform:none}
+/* tant que le verre WebGL charge, panneaux invisibles : sinon le flou CSS s'affiche puis saute vers le verre liquide */
+@media (min-width:901px){ .app:not(.lg-on):not(.lg-off) > .glass{opacity:0} }
+/* intro depuis l'accueil : sa dernière image par-dessus le stand, dissoute par scene.js (--veil), panneaux masqués pendant le dézoom */
+html.intro::after{content:"";position:fixed;inset:0;z-index:100;pointer-events:none;background:var(--from) center / 100% 100% no-repeat;image-rendering:pixelated;opacity:var(--veil,1)}
+html.intro .app > .glass,html.intro .queue-note{opacity:0}
+.left{transform-origin:top left}
+.left .pane-in{padding:18px 18px 16px;gap:12px}
+.left.closed{transform:scale(.6)}
+.desk{transform-origin:top right}
+.desk .pane-in{padding:16px;gap:10px}
+.desk.closed{transform:scale(.6)}
+/* bouton Excel en pixel art (même recette que LinkedIn sur l'accueil) : contour cranté, biseau, ombre dure */
+.xl-foot{position:relative;z-index:1;display:flex;justify-content:center;padding:12px 16px 18px;border-top:1px solid var(--line)}
+.xl{font:700 13px var(--f-display);color:#ffffff;background:var(--xl);border:0;padding:8px 14px;cursor:pointer;white-space:nowrap;
+  box-shadow:inset 3px 3px 0 var(--xl-hi),inset -3px -3px 0 var(--xl-lo),3px 0 0 var(--xl-edge),-3px 0 0 var(--xl-edge),0 3px 0 var(--xl-edge),0 -3px 0 var(--xl-edge),6px 6px 0 rgba(0,0,0,.22);
+  transition:transform .12s ease}
+.xl:hover{background:var(--xl-hover)}
+.xl:active{transform:translate(2px,2px)}
+.xl:focus-visible{outline:3px solid var(--lemon);outline-offset:5px}
+.xl[aria-busy="true"]{cursor:progress;opacity:.75}
+
+/* boutons fermer / bulles pour rouvrir */
+/* boutons ronds en lentille de verre : filtre SVG #frosted (Chrome) ; ailleurs, repli sur un flou simple */
+.x,.bubble{border-radius:50%;padding:0;cursor:pointer;display:grid;place-items:center;
+  background:rgba(255,255,255,.08);border:2px solid transparent;box-shadow:0 0 0 2px var(--lens-ring),0 10px 22px rgba(0,0,0,.12);
+  -webkit-backdrop-filter:blur(3px) saturate(160%);backdrop-filter:blur(3px) saturate(160%);backdrop-filter:url(#frosted);
+  transition:transform .15s ease}
+.x:hover,.bubble:hover{transform:scale(1.07)}
+.x:active,.bubble:active{transform:scale(.94)}
+.x{position:relative;flex:none;width:26px;height:26px;font-size:0;color:transparent}
+.x::before,.x::after{content:"";position:absolute;width:46%;height:2px;border-radius:2px;background:var(--ink);transform:rotate(45deg)}
+.x::after{transform:rotate(-45deg)}
+.bubble{position:fixed;z-index:10;width:42px;height:42px;color:var(--ink);font:700 13px/1 var(--f-mono);
+  transition:opacity .2s ease,transform .26s cubic-bezier(.2,.8,.2,1),display .26s allow-discrete}
+.bubble[hidden]{display:none;opacity:0;transform:scale(.6)}
+@starting-style{.bubble{opacity:0;transform:scale(.6)}}
+.b-left{top:16px;left:max(16px,env(safe-area-inset-left,0px))}
+.b-right{top:16px;right:max(16px,env(safe-area-inset-right,0px))}
+.b-board{top:16px;left:calc(50% - 21px)}
+.b-dock{bottom:16px;left:calc(50% - 21px)}
+
+.eyebrow-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+a.eyebrow{text-decoration:none} a.eyebrow:hover{color:var(--ink)}
+h1{font-family:var(--f-display);font-weight:700;font-size:28px;line-height:1.05;margin:0;letter-spacing:.02em;color:var(--ink);text-shadow:3px 3px 0 var(--lemon);text-wrap:balance}
+.lede{margin:0;color:var(--muted);font-size:13px}
+.lede b{color:var(--ink);font-weight:600}
+h2{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0;font-weight:600;
+  display:flex;justify-content:space-between;align-items:center;gap:8px}
+
+/* formules */
+.groups{display:flex;flex-direction:column;gap:8px}
+.grp-name{font-size:11px;color:var(--muted);margin-bottom:4px}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font:500 12px var(--f-body);color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:6px;padding:3px 7px;cursor:pointer}
+.chip:hover{border-color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
+.x:focus-visible,.bubble:focus-visible,.chip:focus-visible,.btn:focus-visible,.tb:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--lemon);outline-offset:2px}
+
+.fcard,.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.fname{font-family:var(--f-display);font-size:16px}
+.fexpr{font-family:var(--f-mono);font-size:12px;line-height:1.55}
+.fnum{font-family:var(--f-mono);font-size:11.5px;line-height:1.55;color:var(--muted);border-top:1px dashed var(--line);padding-top:6px;overflow-wrap:anywhere}
+.fres{font-family:var(--f-mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.delta{font-size:12px;font-weight:600}
+.delta.up{color:var(--pos)} .delta.down{color:var(--neg)}
+.fnote{margin:0;font-size:12px;color:var(--muted)}
+.sub{margin:0;font-size:12px;color:var(--muted)}
+.sub b{color:var(--ink)}
+/* défi guidé : contour citron, pastilles de progression, carte teintée une fois réussi */
+.defi{border-color:var(--lemon)}
+.defi p{margin:0;font-size:13px}
+.defi-top{display:flex;align-items:center;gap:8px;font:600 11px var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.pips{margin-left:auto;display:flex;gap:4px}
+.pips i{width:8px;height:8px;border-radius:2px;background:var(--line)}
+.pips i.on{background:var(--lemon)}
+.defi-name{font-family:var(--f-display);font-size:16px}
+.defi-prog{font:500 12px var(--f-mono);font-variant-numeric:tabular-nums;border-top:1px dashed var(--line);padding-top:6px;overflow-wrap:anywhere}
+.defi-hint{font-size:12px;color:var(--muted)}
+.defi-hint summary{cursor:pointer;width:max-content;font-weight:600;color:var(--ink)}
+.defi .defi-ok{font:700 13px var(--f-display);color:var(--pos)}
+.defi-act{display:flex;gap:6px}
+.defi-act .opt-go + .opt-go{margin-left:0}
+.defi[hidden]{display:none}
+.opt-go.quiet{background:transparent;color:var(--muted)}
+.defi.won{background:var(--hot)}
+@media (prefers-reduced-motion:no-preference){ .defi.won{animation:defi-pop .45s cubic-bezier(.2,.8,.2,1)} @keyframes defi-pop{40%{transform:scale(1.03)}} }
+
+/* sensibilité */
+.tor{display:flex;flex-direction:column;gap:4px}
+.tor-row{display:grid;grid-template-columns:minmax(0,118px) minmax(0,1fr);gap:8px;align-items:center;font-size:11.5px}
+.tor-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tor-track{position:relative;height:15px}
+.tor-axis{position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--muted);opacity:.6}
+.tor-bar{position:absolute;top:2px;height:11px;border-radius:2px}
+.tor-bar.lo{background:var(--slate)} .tor-bar.hi{background:var(--lemon)}
+.tor-legend{display:flex;gap:14px;font-size:11px;color:var(--muted);flex-wrap:wrap}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:5px}
+
+/* tableau du stand (haut, centre) */
+.board{position:absolute;top:16px;left:0;right:0;margin-inline:auto;transform-origin:top center;pointer-events:auto;isolation:isolate;border-radius:18px;padding:8px 10px 7px;width:min(480px,calc(100% - 32px));box-sizing:border-box;
+  font-family:var(--f-mono);transition:opacity .2s ease,transform .26s cubic-bezier(.2,.8,.2,1),visibility .26s}
+.board.closed{transform:scale(.6)}
+.board-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.board-title{flex:1;min-width:0;font-family:var(--f-display);font-size:12px;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.board-clock{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.board .x{width:22px;height:22px;font-size:13px}
+.cells{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.cell{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px 1px 2px;text-align:center;min-width:0}
+.cell b{display:block;font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cell small{display:block;font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell i{display:block;font-style:normal;font-size:11px;height:14px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.cell i.up{color:var(--pos)} .cell i.down{color:var(--neg)}
+.queue-note{position:absolute;top:118px;left:50%;transform:translateX(-50%);font:600 11px var(--f-mono);color:#16302c;background:rgba(255,255,255,.6);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-radius:999px;padding:4px 10px;pointer-events:none;white-space:nowrap;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis}
+.board.closed ~ .queue-note{top:68px}
+
+/* cascade (bas, centre) */
+.dock{width:min(500px,100%);margin-inline:auto;border-radius:22px;padding:8px;overflow:visible;transform-origin:bottom center}
+.dock.closed{transform:scale(.6)}
+.dock .card{border-radius:16px}
+.wf{position:relative;height:112px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px}
+.wf-col{position:relative;min-width:0}
+.wf-bar{position:absolute;left:12%;right:12%;border-radius:3px;min-height:2px}
+.wf-val{position:absolute;left:-6px;right:-6px;text-align:center;font:600 11px var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.wf-lbl{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;font-size:11px;color:var(--muted);text-align:center;white-space:nowrap}
+.wf-zero{position:absolute;left:0;right:0;height:1px;background:var(--muted);opacity:.5}
+
+/* réglages (droite) */
+.toolbar{display:flex;flex-direction:column;gap:6px}
+.toolbar>div{display:flex;gap:4px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px}
+.tb{flex:1;font:600 12px var(--f-body);color:var(--ink);background:transparent;border:0;border-radius:7px;padding:5px 8px;cursor:pointer}
+.tb[aria-pressed="true"]{background:var(--ink);color:var(--on-ink)}
+.tb:hover{background:var(--line)} .tb[aria-pressed="true"]:hover{background:var(--ink)}
+.presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.btn{font:600 12px var(--f-body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;cursor:pointer;text-align:left}
+.btn small{display:block;font-weight:400;font-size:11px;color:var(--muted)}
+.btn:hover{border-color:var(--muted)}
+details{border-top:1px solid var(--line);padding-top:7px}
+summary{cursor:pointer;font:600 12.5px var(--f-body);list-style:none;display:flex;align-items:center;gap:8px;color:var(--muted);padding:2px 0}
+summary .t{flex:1;min-width:0}
+details.hot summary{color:var(--ink)}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:var(--f-mono);color:var(--muted);width:10px;text-align:center}
+details[open] summary::after{content:"–"}
+.badge{font:600 11px var(--f-mono);background:var(--lemon);color:#16302c;border-radius:999px;min-width:22px;padding:1px 6px;text-align:center;font-variant-numeric:tabular-nums}
+.rows{display:flex;flex-direction:column;gap:6px;padding:8px 0 4px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;padding:3px 6px;border-radius:7px;transition:background .2s}
+.row.hot{background:var(--hot)}
+.row label{font-size:12px;min-width:0}
+.row output{font:600 11.5px var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.row input[type=range]{grid-column:1/-1;width:100%;margin:0;accent-color:var(--ink);height:16px}
+.prod{border:1px solid var(--line);border-radius:10px;padding:6px 4px 4px;display:flex;flex-direction:column;gap:2px}
+.prod-head{display:flex;align-items:center;gap:8px;padding:0 6px;font:600 12.5px var(--f-body)}
+.prod-head input{accent-color:var(--ink);width:15px;height:15px;margin:0}
+.prod-head small{margin-left:auto;font:400 11px var(--f-mono);color:var(--muted)}
+.prod.off .row{display:none}
+/* sous chaque produit : prix qui maximise l'EBITDA et prix plafond de la demande */
+.opt{display:flex;flex-wrap:wrap;align-items:center;gap:3px 10px;padding:4px 6px 2px;font:400 11px var(--f-mono);color:var(--muted)}
+.opt:empty{display:none}
+.opt b{color:var(--ink);font-weight:600}
+.opt-go{margin-left:auto;font:600 11px var(--f-body);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:2px 10px;cursor:pointer}
+.opt-go:hover{background:var(--hot)}
+.opt-go:focus-visible{outline:2px solid var(--lemon);outline-offset:2px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+
+/* les 3 états financiers, sous l'île : un panneau en verre chacun, rempli et mis à jour en direct par game.js.
+   Verre plus opaque que les autres panneaux (--tint-fs) : des colonnes de chiffres doivent rester lisibles par-dessus l'île. */
+.fs{padding:16px 12px 14px;box-sizing:border-box;scroll-margin-top:16px}
+.fs.glass::after{background:var(--tint-fs)}
+.fs-in{flex:1;display:flex;flex-direction:column;gap:8px}
+.fs h2{padding:0 6px;min-height:26px} /* 26px = le bouton × des autres panneaux : les titres s'alignent d'un panneau à l'autre */
+.fs h2 > span:first-child{margin-right:auto} /* titre à gauche ; unité et × groupés à droite */
+/* bulle qui rouvre un état refermé : dans la page, à la place du panneau (elle défile avec lui), pas fixée à l'écran */
+.b-fs{position:relative;z-index:1;pointer-events:auto;justify-self:start;align-self:start;font-size:11px}
+.fs.closed{display:none} /* empilés : l'état refermé rend sa place, sa bulle la prend */
+.fs table{width:100%;border-collapse:collapse}
+.fs th{font:400 12.5px var(--f-body);text-align:left;padding:4px 6px}
+.fs td{font:500 12px var(--f-mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;padding:4px 6px}
+.fs td:last-child{width:52px;padding-left:0;font-size:11px}
+.fs td.up{color:var(--pos)} .fs td.down{color:var(--neg)}
+.fs tr.head th{font:600 11px var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding-top:12px;vertical-align:bottom}
+.fs tr.tot :is(th,td){border-top:1px solid var(--line)}
+.fs tr.tot :is(th,td:nth-child(2)){font-weight:600}
+.fs tr.key :is(th,td){background:var(--panel);border-block:1px solid var(--line)}
+.fs tr.key :is(th,td:nth-child(2)){font-weight:700}
+.fs .sub{margin-top:auto;padding:8px 6px 0;border-top:1px dashed var(--line)}
+.fs-go{display:flex;justify-content:center}
+.fs-go .opt-go{margin-left:0}
+/* écran large : la page défile jusqu'aux états (l'île reste en fond), les réglages restent épinglés à droite pour voir l'impact en direct */
+@media (min-width:901px){
+  body{overflow:hidden auto}
+  .app{height:auto;grid-template-rows:calc(100vh - 32px);overflow:clip} /* clip : l'ombre du verre dépasse de 5px et rallongeait la page */
+  .desk{grid-row:1 / span 4;position:sticky;top:16px;height:calc(100vh - 32px);box-sizing:border-box;align-self:start}
+  .fs,.b-fs{grid-column:1 / 3} .fs1,.b-fs1{grid-row:2} .fs2,.b-fs2{grid-row:3} .fs3,.b-fs3{grid-row:4}
+}
+/* assez de place : les 3 panneaux côte à côte sur un 2e écran entier, à la hauteur du panneau des réglages ;
+   chaque tableau s'étire sur la hauteur de son panneau, ses lignes se répartissent (560px = plancher si l'écran est très bas) */
+@media (min-width:1300px){
+  .app{min-height:calc(200vh - 16px);align-content:start}
+  .desk{grid-row:1 / span 2}
+  .fs{grid-row:2;width:calc((100% - 32px) / 3);height:max(calc(100vh - 32px),560px)} .fs2{justify-self:center} .fs3{justify-self:end}
+  /* côte à côte : l'état refermé garde sa colonne (invisible), sa bulle se pose dans son coin haut gauche */
+  .fs.closed{display:flex}
+  .b-fs{grid-row:2;margin-top:16px} .b-fs1{margin-left:16px} .b-fs2{margin-left:calc((100% + 16px) / 3 + 16px)} .b-fs3{margin-left:calc((100% + 16px) * 2 / 3 + 16px)}
+  .fs-t{flex:1;min-height:0}
+  .fs table{height:100%}
+  .fs tr.head{height:32px} /* hauteur fixée : l'espace en plus va aux lignes de chiffres, pas aux intertitres */
+}
+
+/* écran étroit : la scène devient un bloc, les panneaux s'empilent dessous */
+@media (max-width:900px){
+  body{overflow:auto}
+  html,body{height:auto}
+  #scene{position:relative;height:62vh;min-height:380px;grid-column:1;grid-row:auto;margin-inline:-16px;width:calc(100% + 32px)}
+  .app{height:auto;grid-template-columns:minmax(0,1fr);grid-template-rows:none;pointer-events:auto;padding-top:0}
+  .left,.desk,.dock{grid-column:1;grid-row:auto}
+  .dock{box-sizing:border-box} /* sinon padding + bordure dépassent l'écran de 2px */
+  .pane-in{overflow:visible}
+  .pane.closed{display:none}
+  .queue-note{display:none}
+  .cells{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .cell:nth-child(n+4){display:none}
+  .b-dock,.b-left,.b-right{top:auto;bottom:16px}
+  .b-left{left:16px} .b-right{right:16px} .b-dock{left:calc(50% - 21px)}
+}
+@media (prefers-reduced-motion: reduce){ .row,.pane,.board,.bubble{transition:none} }
+</style>
+
+<!-- racine du verre liquide : le canvas de l'île et chaque surface en verre en sont des enfants directs -->
+<div class="app" id="stage">
+  <canvas id="scene" aria-label="Diorama en pixel art du stand de citronnade"></canvas>
+  <div class="board glass" id="pBoard"><i class="spot" aria-hidden="true"></i>
+    <div class="board-top"><span class="board-title" id="b-title">DAILY ZEST</span><span class="board-clock" id="b-clock">08:00</span>
+      <button class="x" data-close="pBoard" aria-label="Masquer le tableau du stand">×</button></div>
+    <div class="cells" id="cells"></div>
+  </div>
+  <div class="queue-note" id="queue-note"></div>
+
+  <section class="pane glass left" id="pLeft" aria-label="Formules"><i class="spot" aria-hidden="true"></i><div class="pane-in">
+    <div>
+      <div class="eyebrow-row"><a class="eyebrow" href="index.html" title="Retour à l'accueil">← Accueil</a><button class="x" data-close="pLeft" aria-label="Fermer le panneau des formules">×</button></div>
+      <h1>Daily Zest</h1>
+    </div>
+    <p class="lede">Un stand de citronnade sur une île flottante. <b>Bouge les curseurs à droite</b>, puis <b>clique une formule</b> : son calcul et ses leviers s'affichent.</p>
+    <section class="card defi" id="defi" aria-label="Défi"></section>
+    <div class="groups" id="groups"></div>
+    <div class="fcard" id="fcard" aria-live="polite"></div>
+    <div class="card">
+      <h2><span>Sensibilité ±10 %</span><span id="tor-target">FCFF</span></h2>
+      <p class="sub" id="tor-sub"></p>
+      <div class="tor" id="tor"></div>
+      <div class="tor-legend"><span><i class="sw" style="background:var(--slate)"></i>paramètre −10 %</span><span><i class="sw" style="background:var(--lemon)"></i>paramètre +10 %</span></div>
+    </div>
+  </div></section>
+
+  <div class="pane glass dock" id="pDock" aria-label="Cascade du compte de résultat"><i class="spot" aria-hidden="true"></i>
+    <div class="card">
+      <h2><span>Cascade du compte de résultat · € / an</span><button class="x" data-close="pDock" aria-label="Fermer la cascade">×</button></h2>
+      <div class="wf" id="wf"></div>
+      <div class="wf-lbl" id="wf-lbl"></div>
+    </div>
+  </div>
+
+  <aside class="pane glass desk" id="pRight" aria-label="Paramètres"><i class="spot" aria-hidden="true"></i><div class="pane-in">
+    <h2><span>Île</span><button class="x" data-close="pRight" aria-label="Fermer le panneau des paramètres">×</button></h2>
+    <div class="toolbar">
+      <div role="group" aria-label="Moment de la journée">
+        <button class="tb" data-time="day" aria-pressed="true">Jour</button>
+        <button class="tb" data-time="dusk" aria-pressed="false">Soir</button>
+        <button class="tb" data-time="night" aria-pressed="false">Nuit</button>
+      </div>
+      <div>
+        <button class="tb" id="t-left" aria-label="Tourner à gauche">⟲</button>
+        <button class="tb" id="t-right" aria-label="Tourner à droite">⟳</button>
+        <button class="tb" id="t-speed" aria-pressed="false">×3</button>      </div>
+    </div>
+    <h2><span>Paramètres</span><span id="n-params"></span></h2>
+    <div class="presets" id="presets"></div>
+    <div id="sections"></div>
+  </div>
+  <div class="xl-foot"><button class="xl" id="xl-btn" title="Dashboard avec graphiques, 3 états financiers, cash-flows, valorisation et KPIs, avec tes paramètres actuels">Exporter en Excel ↓</button></div>
+  </aside>
+
+  <!-- 2e écran : les 3 états financiers (contenu : game.js). Enfants directs de #stage, comme tout panneau en verre. -->
+  <section class="pane glass fs fs1" id="pFS1" aria-labelledby="fs-is-t" tabindex="-1"><i class="spot" aria-hidden="true"></i><div class="fs-in" id="fs-is"></div></section>
+  <section class="pane glass fs fs2" id="pFS2" aria-labelledby="fs-bs-t"><i class="spot" aria-hidden="true"></i><div class="fs-in" id="fs-bs"></div></section>
+  <section class="pane glass fs fs3" id="pFS3" aria-labelledby="fs-cf-t"><i class="spot" aria-hidden="true"></i><div class="fs-in" id="fs-cf"></div></section>
+</div>
+
+<button class="bubble b-left" data-open="pLeft" hidden aria-label="Afficher les formules" title="Formules">ƒx</button>
+<button class="bubble b-right" data-open="pRight" hidden aria-label="Afficher les paramètres" title="Paramètres">☰</button>
+<button class="bubble b-board" data-open="pBoard" hidden aria-label="Afficher le tableau du stand" title="Tableau du stand">KPI</button>
+<button class="bubble b-dock" data-open="pDock" hidden aria-label="Afficher la cascade" title="Cascade">€</button>
+
+<!-- lentille des boutons ronds : la carte de déplacement est dessinée au chargement (game.js) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="frosted" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+    <feImage id="lens-map" x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map"/>
+    <feGaussianBlur in="SourceGraphic" stdDeviation="0.02" result="blur"/>
+    <feDisplacementMap in="blur" in2="map" scale="0.5" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<script src="i18n.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="game.js"></script>
+<script src="island.js"></script>
+<script src="scene.js"></script>
+<script src="excel.js"></script>
+<script type="module">
+  // Verre liquide WebGL (@ybouane/liquidglass) : recopie l'île derrière chaque panneau puis la réfracte et la floute.
+  // Ne dépend pas de backdrop-filter, donc identique dans Chrome, Safari et Firefox. En cas d'échec, le flou CSS reste.
+  const root = document.getElementById('stage');
+  if (!matchMedia('(max-width:900px)').matches) {
+    setTimeout(() => root.classList.contains('lg-on') || root.classList.add('lg-off'), 4000); // CDN lent : on affiche le flou CSS
+    try {
+      const { LiquidGlass } = await import('https://cdn.jsdelivr.net/npm/@ybouane/liquidglass@1.0.3/dist/index.js');
+      const glassEls = [...root.querySelectorAll(':scope > .glass')];
+      for (const el of glassEls) el.dataset.config = JSON.stringify({
+        cornerRadius: parseFloat(getComputedStyle(el).borderTopLeftRadius) || 24, zRadius: 22,
+        blurAmount: 0.4, refraction: 0.5, chromAberration: 0.03, edgeHighlight: 0.15, specular: 0.2, fresnel: 0.8,
+        shadowOpacity: 0.18, shadowSpread: 18, shadowOffsetY: 8,
+      });
+      // = LiquidGlass.init(), moins ce qui ne sert qu'à photographier le contenu des panneaux (html-to-image + polices
+      // Google embarquées en base64, plusieurs secondes) : nos surfaces en verre ne se superposent jamais.
+      // ponytail: internes de la v1.0.3 (_start, _captureGlassContent, capture._fontBlocks), à revoir si on change de version.
+      const glass = new LiquidGlass({ root, glassElements: glassEls });
+      glass._captureGlassContent = async () => {};
+      glass.capture._fontBlocks = []; glass.capture.prefetchFontEmbedCSS = async () => {};
+      await glass._start();
+      window.glass = glass;
+      root.classList.add('lg-on');
+    } catch (e) { root.classList.add('lg-off'); console.warn('Verre liquide WebGL indisponible, flou CSS conservé.', e); }
+  }
+</script>
