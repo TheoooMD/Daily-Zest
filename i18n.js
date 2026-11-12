@@ -54,6 +54,20 @@ const DOM_EN = {
   'Tableau du stand': 'Stand dashboard',
   'Afficher la cascade': 'Show the waterfall',
   'Cascade': 'Waterfall',
+  // SaaSsy
+  'SaaSsy · AI SaaS Simulator': 'SaaSsy · AI SaaS Simulator',
+  'Masquer le tableau SaaS': 'Hide SaaS dashboard',
+  'Afficher le tableau SaaS': 'Show SaaS dashboard',
+  'Tableau SaaS': 'SaaS dashboard',
+  'Cascade du P&L SaaS': 'SaaS P&L waterfall',
+  'P&L Waterfall · € / an': 'P&L Waterfall · $ / year',
+  'Cascade P&L': 'P&L Waterfall',
+  'Open Space': 'Tech Loft',
+  'Scénarios Types': 'SaaS Presets',
+  'Nuit (Cyber)': 'Night (Cyber)',
+  'Accélérer le pipe': 'Accelerate pipeline',
+  'Simulateur financier <b>SaaS B2B</b>. Bouge les curseurs et observe l\'ARR, le NRR, le Deferred Revenue et la valorisation en direct.':
+    'Interactive <b>B2B SaaS</b> model. Move sliders to watch ARR, NRR, Deferred Revenue, and valuation live.',
 };
 
 // remplace le texte exact (hors espaces de bord) ; garde l'original pour pouvoir rebasculer sans recharger
