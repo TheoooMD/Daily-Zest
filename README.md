@@ -6,7 +6,7 @@ Every slider you move (foot traffic, prices, wages, capex, debt, cost of capital
 income statement, cash flow statement and balance sheet, then into a DCF valuation. Click any formula
 to see it computed with your own numbers and its most sensitive drivers. No backend, no install.
 
-👉 **Live demo:** https://theooomd.github.io/daily-zest/
+👉 **Live demo:** https://theooomd.github.io/Daily-Zest/
 
 ---
 
